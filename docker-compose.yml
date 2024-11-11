@@ -1,0 +1,54 @@
+services:
+  # Database (PostgreSQL)
+  ecomm-db:
+    image: postgres:17.0
+    container_name: db
+    ports:
+      - 5435:5432
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+      - ./pg-dumps:/home/pg-dumps
+      - ./initdb.sql:/docker-entrypoint-initdb.d/initdb.sql
+    env_file:
+      - ./db.env
+
+  # User Account Management (Express.js Microservice)
+  ecomm-auth:
+    build: ../auth
+    image: ecomm-auth
+    container_name: auth
+    command: /bin/sh -c 'yarn prisma migrate deploy && yarn devStart'
+    depends_on:
+      - ecomm-db
+    ports:
+      - 8000:8000
+    env_file:
+      - ./.env
+      - ../auth/.env
+    volumes:
+      - ../auth/src:/app/src
+      - ../auth/prisma:/app/prisma
+      - ../auth/package.json:/app/package.json
+      - ../auth/yarn.lock:/app/yarn.lock
+      - ../auth/tsconfig.json:/app/ts-config.json
+      - ../auth/secrets:/app/secrets
+
+  ecomm-store:
+    build: ../store
+    image: ecomm-store
+    container_name: store
+    command: /bin/sh -c 'yarn prisma migrate deploy && yarn devStart'
+    depends_on:
+      - ecomm-db
+    ports:
+      - 8001:8001
+    env_file:
+      - ./.env
+      - ../store/.env
+    volumes:
+      - ../store/src:/app/src
+      - ../store/prisma:/app/prisma
+      - ../store/package.json:/app/package.json
+      - ../store/yarn.lock:/app/yarn.lock
+      - ../store/tsconfig.json:/app/ts-config.json
+      - ../store/secrets:/app/secrets
